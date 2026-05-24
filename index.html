@@ -24,6 +24,7 @@
     .meta { font-size: 12px; color: #888; margin-top: 4px; line-height: 1.6; }
     .error { color: #ff3b30; font-size: 14px; padding: 12px; background: #fff0f0; border-radius: 8px; }
     .suspension-badge { display: inline-block; margin-top: 6px; padding: 4px 10px; background: #ff3b30; color: #fff; border-radius: 6px; font-size: 12px; font-weight: bold; }
+    .mail-link { display: inline-block; margin-top: 6px; padding: 4px 10px; background: #f0f0f0; color: #007aff; border-radius: 6px; font-size: 12px; text-decoration: none; }
   </style>
 </head>
 <body>
@@ -83,26 +84,29 @@
         if (account.povo_suspension_date) {
           const sd = new Date(account.povo_suspension_date);
           const isPast = sd < new Date();
-          const mailLink = account.suspension_email_id
-            ? ` <a href="https://mail.google.com/mail/u/0/#all/${account.suspension_email_id}" target="_blank" style="color:#fff;text-decoration:underline;font-size:11px;">📧 メール確認</a>`
-            : '';
           if (isPast && account.povo_termination_date) {
             suspensionBadge =
-              `<div class="suspension-badge">🚨 停止済み | 契約解除予定: ${account.povo_termination_date}${mailLink}</div>`;
+              `<div class="suspension-badge">🚨 停止済み | 契約解除予定: ${account.povo_termination_date}</div>`;
           } else if (isPast) {
             suspensionBadge =
-              `<div class="suspension-badge">🚨 povo公式: ${account.povo_suspension_date} より停止中${mailLink}</div>`;
+              `<div class="suspension-badge">🚨 povo公式: ${account.povo_suspension_date} より停止中</div>`;
           } else {
             suspensionBadge =
-              `<div class="suspension-badge" style="background:#ff9500">⚠️ 停止予告: ${account.povo_suspension_date}${mailLink}</div>`;
+              `<div class="suspension-badge" style="background:#ff9500">⚠️ 停止予告: ${account.povo_suspension_date}</div>`;
           }
         }
+
+        // Gmailリンク（停止予告メールへの直接リンク）
+        const mailLinkBadge = account.suspension_email_id
+          ? `<a href="https://mail.google.com/mail/u/0/#all/${account.suspension_email_id}" target="_blank" class="mail-link">📧 停止予告メールを確認</a>`
+          : '';
 
         return `
           <div class="card">
             <div class="label">${account.label}回線${phoneDisplay} &nbsp;${account.email}</div>
             <div class="days ${urgency}">${daysLabel}</div>
             ${suspensionBadge}
+            ${mailLinkBadge}
             <div class="bar-track">
               <div class="bar-fill ${urgency}" style="width:${pct}%"></div>
             </div>
