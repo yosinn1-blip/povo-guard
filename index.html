@@ -32,8 +32,7 @@
   <script>
     // ★ デプロイ後に実際の値に変更すること
     const WORKER_URL = 'https://povo-guard.yosinn1.workers.dev';
-    const WORKER_SECRET = localStorage.getItem('povo_secret') || prompt('Worker Secret を入力してください');
-    if (WORKER_SECRET) localStorage.setItem('povo_secret', WORKER_SECRET);
+    const WORKER_SECRET = '77a31adbd4de7cf3b2404671abb74210';
 
     async function load(isRefresh = false) {
       const btn = document.getElementById('refreshBtn');
