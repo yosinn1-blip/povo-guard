@@ -22,7 +22,8 @@ export async function sendNotification(
     あと <strong>${daysRemaining}日</strong> で利用停止になります。</p>
     <p>今すぐ最安トッピングを購入してください。<br>
     <strong>100円ガチャ</strong>が最安の延命手段です。</p>
-    <p>→ <a href="https://povo.jp">povo アプリで購入する</a></p>
+    <p>→ <a href="https://kddi-povo.app.link/">📱 povo アプリで購入する</a></p>
+    <p>→ <a href="https://yosinn1-blip.github.io/povo-guard/">📊 ダッシュボードを確認する</a></p>
     <hr>
     <p style="font-size:12px;color:#888">
     最終有効期限: ${account.last_expiry} ／ 経過: ${daysElapsed}日 ／ 閾値: ${threshold}日
@@ -72,7 +73,8 @@ export async function sendSuspensionAlert(
     <p><strong>${account.label}回線（${account.email}）</strong><br>
     停止予定日: <strong>${dateStr}</strong>${isPast ? '（すでに停止中）' : `（あと${daysUntil}日）`}</p>
     <p style="color:red;font-weight:bold">今すぐ povo アプリでトッピングを購入してください！</p>
-    <p>→ <a href="https://povo.jp">povo アプリで購入する</a></p>
+    <p>→ <a href="https://kddi-povo.app.link/">📱 povo アプリで購入する</a></p>
+    <p>→ <a href="https://yosinn1-blip.github.io/povo-guard/">📊 ダッシュボードを確認する</a></p>
     <hr>
     <p style="font-size:12px;color:#888">
     ※ povo公式メール（important@emails.povo.jp）を検知して自動送信
