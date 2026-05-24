@@ -65,6 +65,7 @@ interface GmailMeta {
   subject: string;
   date: Date;
   to: string;
+  snippet: string;
 }
 
 async function getMessageMeta(accessToken: string, messageId: string): Promise<GmailMeta> {
@@ -75,6 +76,7 @@ async function getMessageMeta(accessToken: string, messageId: string): Promise<G
     headers: { Authorization: `Bearer ${accessToken}` },
   });
   const data = await res.json() as {
+    snippet: string;
     payload: { headers: Array<{ name: string; value: string }> };
   };
   const get = (name: string) =>
@@ -83,7 +85,50 @@ async function getMessageMeta(accessToken: string, messageId: string): Promise<G
     subject: get('Subject'),
     date: new Date(get('Date')),
     to: get('To'),
+    snippet: data.snippet || '',
   };
+}
+
+export interface SuspensionAlert {
+  suspensionDate: Date; // povo公式の停止予告日
+  alertEmailDate: Date; // その警告メールの送信日
+}
+
+/** "2026年5月1日" 形式の日本語日付をパースして Date を返す */
+function parseJpDate(text: string): Date | null {
+  const m = text.match(/(\d{4})年(\d{1,2})月(\d{1,2})日/);
+  if (!m) return null;
+  return new Date(Date.UTC(parseInt(m[1]), parseInt(m[2]) - 1, parseInt(m[3])));
+}
+
+// アカウントごとの最新「利用停止予告」日を返す
+export async function scanSuspensionAlerts(env: Env): Promise<Map<string, SuspensionAlert>> {
+  const accessToken = await getAccessToken(env);
+  const messageIds = await searchMessages(
+    accessToken,
+    'from:important@emails.povo.jp subject:長期間トッピング未購入による利用停止予告'
+  );
+
+  const best = new Map<string, SuspensionAlert>();
+
+  for (const id of messageIds) {
+    const msg = await getMessageMeta(accessToken, id);
+
+    // snippet から "YYYY年M月D日より順次ご利用を停止" を抽出
+    const suspensionDate = parseJpDate(
+      msg.snippet.match(/(\d{4}年\d{1,2}月\d{1,2}日)より順次ご利用を停止/)?.[1] ?? ''
+    );
+    if (!suspensionDate) continue;
+
+    const accountEmail = extractAccountEmail(msg.to);
+    const existing = best.get(accountEmail);
+    // より新しい警告メールで上書き
+    if (!existing || msg.date > existing.alertEmailDate) {
+      best.set(accountEmail, { suspensionDate, alertEmailDate: msg.date });
+    }
+  }
+
+  return best;
 }
 
 // アカウントごとの最終トッピング購入日を返す（180日ルールは購入日起算）

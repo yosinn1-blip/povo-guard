@@ -1,24 +1,62 @@
 import type { Env } from './types';
-import { scanAllAccounts } from './gmail';
+import { scanAllAccounts, scanSuspensionAlerts } from './gmail';
 import { buildAccountStatus } from './calculator';
-import { getAccounts, updateAccountExpiry, hasNotified, recordNotification } from './db';
-import { getReachedThresholds, sendNotification } from './notifier';
+import { getAccounts, updateAccountExpiry, updateSuspensionDate, hasNotified, recordNotification } from './db';
+import { getReachedThresholds, sendNotification, sendSuspensionAlert } from './notifier';
+
+// 停止予告通知の重複防止用特別閾値
+const SUSPENSION_THRESHOLD = 999;
 
 async function runDailyScan(env: Env): Promise<void> {
-  const expiryMap = await scanAllAccounts(env);
+  // 購入履歴スキャン と 停止予告スキャン を並列実行
+  const [expiryMap, suspensionMap] = await Promise.all([
+    scanAllAccounts(env),
+    scanSuspensionAlerts(env),
+  ]);
+
   const accounts = await getAccounts(env);
   const now = new Date().toISOString();
 
   for (const account of accounts) {
+    // 1. 購入日の更新
     const newExpiry = expiryMap.get(account.email);
     if (newExpiry) {
       const expiryStr = newExpiry.toISOString().slice(0, 10);
       if (expiryStr !== account.last_expiry) {
         await updateAccountExpiry(env, account.id, expiryStr, now);
         account.last_expiry = expiryStr;
+        // 新しい購入が確認されたので停止予告日をクリア
+        await updateSuspensionDate(env, account.id, null);
+        account.povo_suspension_date = null;
       }
     }
 
+    // 2. povo公式の停止予告日を更新
+    const alert = suspensionMap.get(account.email);
+    if (alert) {
+      const suspStr = alert.suspensionDate.toISOString().slice(0, 10);
+      // 購入日より後の停止予告のみ有効（古い予告は無視）
+      const isFreshAlert = !account.last_expiry ||
+        alert.alertEmailDate > new Date(account.last_expiry);
+
+      if (isFreshAlert && suspStr !== account.povo_suspension_date) {
+        await updateSuspensionDate(env, account.id, suspStr);
+        account.povo_suspension_date = suspStr;
+      }
+
+      // 停止予告の通知（重複防止: last_expiryをキーに1回だけ）
+      if (isFreshAlert && account.last_expiry) {
+        const alreadyNotified = await hasNotified(
+          env, account.id, SUSPENSION_THRESHOLD, account.last_expiry
+        );
+        if (!alreadyNotified) {
+          await sendSuspensionAlert(env, account, alert.suspensionDate);
+          await recordNotification(env, account.id, 999, SUSPENSION_THRESHOLD);
+        }
+      }
+    }
+
+    // 3. 通常の閾値通知（60/120/150/160/170日）
     const status = buildAccountStatus(account);
     const thresholds = getReachedThresholds(status.daysElapsed);
 

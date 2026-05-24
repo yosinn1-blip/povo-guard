@@ -13,7 +13,8 @@ export interface PovoAccountRow {
   id: string;
   email: string;
   label: string;
-  last_expiry: string | null;   // ISO date string: "2026-05-31"
+  last_expiry: string | null;         // ISO date string: "2026-05-31"
+  povo_suspension_date: string | null; // povo公式の停止予告日 "2026-05-01"
   last_scanned_at: string | null;
   status: 'active' | 'warning' | 'suspended';
 }

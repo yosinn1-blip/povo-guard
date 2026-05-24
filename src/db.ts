@@ -39,6 +39,17 @@ export async function updateAccountExpiry(
   });
 }
 
+export async function updateSuspensionDate(
+  env: Env,
+  id: string,
+  suspensionDate: string | null
+): Promise<void> {
+  await supabaseFetch(env, `/povo_accounts?id=eq.${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ povo_suspension_date: suspensionDate }),
+  });
+}
+
 // lastExpiry以降に同じthresholdで通知済みかチェック（新購入後はリセットされる）
 export async function hasNotified(
   env: Env,

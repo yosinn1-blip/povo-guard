@@ -23,6 +23,7 @@
     .bar-fill.danger  { background: #ff3b30; }
     .meta { font-size: 12px; color: #888; margin-top: 4px; line-height: 1.6; }
     .error { color: #ff3b30; font-size: 14px; padding: 12px; background: #fff0f0; border-radius: 8px; }
+    .suspension-badge { display: inline-block; margin-top: 6px; padding: 4px 10px; background: #ff3b30; color: #fff; border-radius: 6px; font-size: 12px; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -61,15 +62,28 @@
         const scanned = account.last_scanned_at
           ? new Date(account.last_scanned_at).toLocaleString('ja-JP')
           : '未スキャン';
+
+        // povo公式停止予告バッジ
+        const suspensionBadge = account.povo_suspension_date ? (() => {
+          const sd = new Date(account.povo_suspension_date);
+          const today = new Date();
+          const isPast = sd < today;
+          const label = isPast
+            ? `🚨 povo公式: ${account.povo_suspension_date} より停止中`
+            : `⚠️ povo公式停止予告: ${account.povo_suspension_date}`;
+          return `<div class="suspension-badge">${label}</div>`;
+        })() : '';
+
         return `
           <div class="card">
             <div class="label">${account.label}回線 &nbsp;${account.email}</div>
             <div class="days ${urgency}">残り ${daysRemaining} 日</div>
+            ${suspensionBadge}
             <div class="bar-track">
               <div class="bar-fill ${urgency}" style="width:${pct}%"></div>
             </div>
             <div class="meta">
-              最終有効期限: ${account.last_expiry || '未検出'}<br>
+              最終購入日: ${account.last_expiry || '未検出'}<br>
               経過: ${daysElapsed}日 / 180日<br>
               最終スキャン: ${scanned}
             </div>
