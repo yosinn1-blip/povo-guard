@@ -14,9 +14,11 @@ export interface PovoAccountRow {
   email: string;
   label: string;
   last_expiry: string | null;         // ISO date string: "2026-05-31"
-  povo_suspension_date: string | null; // povo公式の停止予告日 "2026-05-01"
+  povo_suspension_date: string | null;  // povo公式の停止予告日 "2026-05-01"
+  povo_termination_date: string | null; // povo公式の契約解除予定日 "2026-06-01"
   last_scanned_at: string | null;
   status: 'active' | 'warning' | 'suspended';
+  phone_suffix: string | null;
 }
 
 export interface AccountStatus {
@@ -24,6 +26,7 @@ export interface AccountStatus {
   daysElapsed: number;
   daysRemaining: number;
   urgency: 'safe' | 'warning' | 'danger';
+  phase: 'normal' | 'suspension_pending' | 'termination_pending';
 }
 
 export interface ParsedTopping {
