@@ -86,29 +86,28 @@ async function getMessageMeta(accessToken: string, messageId: string): Promise<G
   };
 }
 
-// アカウントごとの最終トッピング有効期限を返す
+// アカウントごとの最終トッピング購入日を返す（180日ルールは購入日起算）
 export async function scanAllAccounts(env: Env): Promise<Map<string, Date>> {
   const accessToken = await getAccessToken(env);
+  // 実際の購入完了メールは info@povo.jp から送信される
   const messageIds = await searchMessages(
     accessToken,
-    'from:infoc@emails.povo.jp "を購入された方へ"'
+    'from:info@povo.jp subject:【povo】トッピング購入完了のお知らせ'
   );
 
-  const best = new Map<string, { expiry: Date }>();
+  const best = new Map<string, Date>();
 
   for (const id of messageIds) {
     const msg = await getMessageMeta(accessToken, id);
-    const topping = parseTopping(msg.subject);
-    if (!topping) continue;
 
     const accountEmail = extractAccountEmail(msg.to);
-    const expiry = calcExpiryFromPurchase(msg.date, topping.validityDays);
+    const purchaseDate = msg.date;
 
     const current = best.get(accountEmail);
-    if (!current || expiry > current.expiry) {
-      best.set(accountEmail, { expiry });
+    if (!current || purchaseDate > current) {
+      best.set(accountEmail, purchaseDate);
     }
   }
 
-  return new Map([...best.entries()].map(([email, v]) => [email, v.expiry]));
+  return best;
 }
