@@ -39,14 +39,20 @@ export async function updateAccountExpiry(
   });
 }
 
-export async function updateSuspensionDate(
+export async function updateSuspensionDates(
   env: Env,
   id: string,
-  suspensionDate: string | null
+  suspensionDate: string | null,
+  terminationDate: string | null,
+  emailId: string | null = null
 ): Promise<void> {
   await supabaseFetch(env, `/povo_accounts?id=eq.${id}`, {
     method: 'PATCH',
-    body: JSON.stringify({ povo_suspension_date: suspensionDate }),
+    body: JSON.stringify({
+      povo_suspension_date: suspensionDate,
+      povo_termination_date: terminationDate,
+      ...(emailId !== null ? { suspension_email_id: emailId } : {}),
+    }),
   });
 }
 

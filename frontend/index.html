@@ -83,15 +83,18 @@
         if (account.povo_suspension_date) {
           const sd = new Date(account.povo_suspension_date);
           const isPast = sd < new Date();
+          const mailLink = account.suspension_email_id
+            ? ` <a href="https://mail.google.com/mail/u/0/#all/${account.suspension_email_id}" target="_blank" style="color:#fff;text-decoration:underline;font-size:11px;">📧 メール確認</a>`
+            : '';
           if (isPast && account.povo_termination_date) {
             suspensionBadge =
-              `<div class="suspension-badge">🚨 停止済み | 契約解除予定: ${account.povo_termination_date}</div>`;
+              `<div class="suspension-badge">🚨 停止済み | 契約解除予定: ${account.povo_termination_date}${mailLink}</div>`;
           } else if (isPast) {
             suspensionBadge =
-              `<div class="suspension-badge">🚨 povo公式: ${account.povo_suspension_date} より停止中</div>`;
+              `<div class="suspension-badge">🚨 povo公式: ${account.povo_suspension_date} より停止中${mailLink}</div>`;
           } else {
             suspensionBadge =
-              `<div class="suspension-badge" style="background:#ff9500">⚠️ 停止予告: ${account.povo_suspension_date}</div>`;
+              `<div class="suspension-badge" style="background:#ff9500">⚠️ 停止予告: ${account.povo_suspension_date}${mailLink}</div>`;
           }
         }
 

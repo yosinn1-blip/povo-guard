@@ -1,18 +1,33 @@
 import type { Env } from './types';
-import { scanAllAccounts, scanSuspensionAlerts } from './gmail';
+import { scanAllAccounts, scanBillingEmails, scanSuspensionAlerts } from './gmail';
 import { buildAccountStatus } from './calculator';
-import { getAccounts, updateAccountExpiry, updateSuspensionDate, hasNotified, recordNotification } from './db';
+import { getAccounts, updateAccountExpiry, updateSuspensionDates, hasNotified, recordNotification } from './db';
 import { getReachedThresholds, sendNotification, sendSuspensionAlert } from './notifier';
 
 // 停止予告通知の重複防止用特別閾値
 const SUSPENSION_THRESHOLD = 999;
 
 async function runDailyScan(env: Env): Promise<void> {
-  // 購入履歴スキャン と 停止予告スキャン を並列実行
-  const [expiryMap, suspensionMap] = await Promise.all([
+  // 購入履歴スキャン・課金スキャン・停止予告スキャン を並列実行
+  const [purchaseMap, billingMap, suspensionMap] = await Promise.all([
     scanAllAccounts(env),
+    scanBillingEmails(env),
     scanSuspensionAlerts(env),
   ]);
+
+  // 購入完了メール と 課金メール の日付を統合して最新購入日を決定
+  // サブスクトッピングは「購入完了のお知らせ」が来ないため課金メールで補完する
+  const expiryMap = new Map<string, Date>();
+  const allEmails = new Set([...purchaseMap.keys(), ...billingMap.keys()]);
+  for (const email of allEmails) {
+    const purchaseDate = purchaseMap.get(email) ?? null;
+    const billingDate = billingMap.get(email) ?? null;
+    const latest =
+      purchaseDate && billingDate
+        ? purchaseDate > billingDate ? purchaseDate : billingDate
+        : purchaseDate ?? billingDate!;
+    expiryMap.set(email, latest);
+  }
 
   const accounts = await getAccounts(env);
   const now = new Date().toISOString();
@@ -25,23 +40,29 @@ async function runDailyScan(env: Env): Promise<void> {
       if (expiryStr !== account.last_expiry) {
         await updateAccountExpiry(env, account.id, expiryStr, now);
         account.last_expiry = expiryStr;
-        // 新しい購入が確認されたので停止予告日をクリア
-        await updateSuspensionDate(env, account.id, null);
+        // 新しい購入が確認されたので停止予告日・解除予定日をクリア
+        await updateSuspensionDates(env, account.id, null, null);
         account.povo_suspension_date = null;
+        account.povo_termination_date = null;
       }
     }
 
-    // 2. povo公式の停止予告日を更新
+    // 2. povo公式の停止予告日・契約解除予定日を更新
     const alert = suspensionMap.get(account.email);
     if (alert) {
       const suspStr = alert.suspensionDate.toISOString().slice(0, 10);
+      const termStr = alert.terminationDate
+        ? alert.terminationDate.toISOString().slice(0, 10)
+        : null;
       // 購入日より後の停止予告のみ有効（古い予告は無視）
       const isFreshAlert = !account.last_expiry ||
         alert.alertEmailDate > new Date(account.last_expiry);
 
-      if (isFreshAlert && suspStr !== account.povo_suspension_date) {
-        await updateSuspensionDate(env, account.id, suspStr);
+      if (isFreshAlert && (suspStr !== account.povo_suspension_date || termStr !== account.povo_termination_date || alert.messageId !== account.suspension_email_id)) {
+        await updateSuspensionDates(env, account.id, suspStr, termStr, alert.messageId);
         account.povo_suspension_date = suspStr;
+        account.povo_termination_date = termStr;
+        account.suspension_email_id = alert.messageId;
       }
 
       // 停止予告の通知（重複防止: last_expiryをキーに1回だけ）

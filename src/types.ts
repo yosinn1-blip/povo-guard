@@ -19,6 +19,7 @@ export interface PovoAccountRow {
   last_scanned_at: string | null;
   status: 'active' | 'warning' | 'suspended';
   phone_suffix: string | null;
+  suspension_email_id: string | null;
 }
 
 export interface AccountStatus {
