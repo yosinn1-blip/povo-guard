@@ -101,12 +101,16 @@
           ? `<a href="https://mail.google.com/mail/u/0/#all/${account.suspension_email_id}" target="_blank" class="mail-link">📧 停止予告メールを確認</a>`
           : '';
 
+        // povoアプリへのディープリンク（スマホなら直接アプリが開く）
+        const appLinkBadge = `<a href="https://kddi-povo.app.link/" target="_blank" class="mail-link" style="background:#fff3e0;color:#ff9500;">📱 povoアプリでトッピング購入</a>`;
+
         return `
           <div class="card">
             <div class="label">${account.label}回線${phoneDisplay} &nbsp;${account.email}</div>
             <div class="days ${urgency}">${daysLabel}</div>
             ${suspensionBadge}
             ${mailLinkBadge}
+            ${appLinkBadge}
             <div class="bar-track">
               <div class="bar-fill ${urgency}" style="width:${pct}%"></div>
             </div>
